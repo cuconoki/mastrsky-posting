@@ -26,6 +26,8 @@
     "react-dom": "18.2.0",
     "react-hook-form": "^7.43.9",
     "tailwindcss": "3.3.1",
+    "twitter-api-sdk": "^1.2.1",
+    "twitter-api-v2": "^1.14.2",
     "typescript": "5.0.4",
     "websocket-polyfill": "^0.0.3"
   }

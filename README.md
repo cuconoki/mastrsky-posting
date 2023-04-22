@@ -1,3 +1,8 @@
+# MASTRSKY
+
+必要な認証情報を一通り取得して、VercelやNetlifyあたりに環境変数として設定しつつデプロイすると、お一人様用クロスポストWebアプリとして使えるはず！
+
+
 ## Getting Started
 
 First, run the development server:
@@ -11,8 +16,6 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
 
 
 ## Learn More
@@ -32,4 +35,8 @@ You can start editing the page by modifying `pages/index.tsx`. The page auto-upd
 | `BSKY_PASSWORD` | xxxxxxxx | Blueskyのパスワード
 | `MASTODON_URL` | https://mastodon.social/ | MastodonのインスタンスURL
 | `MASTODON_TOKEN` | 12345...xyz | Mastodonのアクセストークン。settingsの開発で取得
+| `TWITTER_API_KEY` | 12345...xyz | TwitterのAPI KEY。FreeプランのAPIでOK
+| `TWITTER_API_KEY_SECRET` | 12345...xyz | TwitterのAPI KEY SECRET。FreeプランのAPIでOK
+| `TWITTER_ACCESS_TOKEN` | 12345...xyz | TwitterのACCESS TOKEN。権限はRead Writeを設定してから発行が必要。
+| `TWITTER_ACCESS_TOKEN_SECRET` | 12345...xyz | TwitterのACCESS TOKEN SECRET。権限はRead Writeを設定してから発行が必要。
 

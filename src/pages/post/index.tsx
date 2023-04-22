@@ -5,27 +5,29 @@ import type { NextPage } from "next"
 import { GetServerSideProps } from "next"
 import { getSession, withPageAuthRequired } from "@auth0/nextjs-auth0"
 import { useForm, SubmitHandler } from "react-hook-form"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Event } from "nostr-tools"
 import useNostrHook from "@/hooks/useNostrHook"
 
 type Props = {
   session: Record<string, unknown> | null
+  services: (string | null)[]
 }
 
 type FormData = {
   comment: string
-  service: (string | boolean)[]
+  service: (string | boolean | null)[]
 }
 
 type NostRes = {
   event: Event | undefined
 }
 
-const services = ["Mastodon", "Nostr", "Bluesky"]
-
-const PostPage: NextPage = () => {
+const PostPage: NextPage<Props> = ({ services }) => {
   const { publishNostr } = useNostrHook()
+  const [isPosting, setIsPosting] = useState(false)
+
+  const isServices = services.length > 0 ? true : false
 
   const {
     register,
@@ -43,6 +45,18 @@ const PostPage: NextPage = () => {
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     console.log(data)
+    setIsPosting(true)
+
+    if (data.service.includes("Twitter") === true) {
+      const twitterRes = await fetch("/api/twitterPost", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ comment: data.comment }),
+      })
+      console.log("Twitter Postes")
+    }
 
     if (data.service.includes("Mastodon") === true) {
       const mastodonRes = await fetch("/api/mastodonPost", {
@@ -78,6 +92,7 @@ const PostPage: NextPage = () => {
       })
       console.log("Bluesky Postes")
     }
+    setIsPosting(false)
   }
 
   return (
@@ -89,13 +104,17 @@ const PostPage: NextPage = () => {
         <meta name="robots" content="noindex" />
       </Head>
       <main>
+        <div className={`postFiller ${isPosting ? "postFiller--isPosting" : ""}`}></div>
         <div className="max-w-2xl mx-auto p-2">
-          <h1 className="mb-4 text-3xl font-extrabold text-gray-900 md:text-5xl lg:text-6xl">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">
-              CROSPOST APP
-            </span>
-          </h1>
           <form className="max-w-2xl mx-auto" onSubmit={handleSubmit(onSubmit)}>
+            <div className="flex items-center justify-end px-0 py-2">
+              <button
+                type="submit"
+                className="border-2 border-sky-500 inline-flex items-center py-1 px-6 text-sm font-medium text-center text-sky-500 bg-white rounded-full hover:bg-sky-200"
+              >
+                POST
+              </button>
+            </div>
             <div className="w-full mb-4 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
               <div className="px-2 py-2 bg-white rounded-t-lg dark:bg-gray-800">
                 <label htmlFor="comment" className="sr-only">
@@ -103,42 +122,37 @@ const PostPage: NextPage = () => {
                 </label>
                 <textarea
                   id="comment"
-                  rows={8}
+                  rows={5}
                   className="w-full p-2 text-base text-gray-900 bg-white border-0 dark:bg-gray-800 focus:ring-0 dark:text-white dark:placeholder-gray-400"
                   placeholder="今何してる？"
                   {...register("comment", { required: true })}
                 />
               </div>
 
-              <h2 className="border-t p-3 text-xs">投稿先</h2>
-              <ul className="grid w-full gap-6 grid-cols-3 p-3 pt-0">
-                {services.map((service, index) => (
-                  <li key={service}>
-                    <input
-                      type="checkbox"
-                      id={`service-${service}`}
-                      value={service}
-                      className="hidden peer"
-                      {...register(`service.${index}`, {})}
-                    />
-                    <label
-                      htmlFor={`service-${service}`}
-                      className="inline-flex items-center justify-between w-full p-2 text-gray-500 bg-white border-2 border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-600 hover:text-gray-600 peer-checked:text-white hover:bg-gray-50 peer-checked:bg-blue-600"
-                    >
-                      <div className="w-full text-sm font-semibold text-center">{service}</div>
-                    </label>
-                  </li>
-                ))}
+              <h2 className="border-t p-2 text-xs">投稿先</h2>
+              <ul className="grid w-full gap-2 grid-cols-4 p-2 pt-0">
+                {isServices &&
+                  services.map(
+                    (service, index) =>
+                      service && (
+                        <li key={service}>
+                          <input
+                            type="checkbox"
+                            id={`service-${service}`}
+                            value={service}
+                            className="hidden peer"
+                            {...register(`service.${index}`, {})}
+                          />
+                          <label
+                            htmlFor={`service-${service}`}
+                            className="inline-flex items-center justify-between w-full p-1 text-gray-500 bg-white border-2 border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-600 hover:text-gray-600 peer-checked:text-white hover:bg-gray-50 peer-checked:bg-blue-600"
+                          >
+                            <div className="w-full text-sm font-semibold text-center">{service}</div>
+                          </label>
+                        </li>
+                      )
+                  )}
               </ul>
-
-              <div className="flex items-center justify-end px-3 py-2 border-t">
-                <button
-                  type="submit"
-                  className="inline-flex items-center py-2 px-8 text-lg font-medium text-center text-white bg-purple-700 rounded-lg focus:ring-4 focus:ring-purple-200 hover:bg-purple-800"
-                >
-                  POST
-                </button>
-              </div>
             </div>
           </form>
 
@@ -163,19 +177,38 @@ const PostPage: NextPage = () => {
               />
             </svg>
           </Link>
+
+          <h1 className="mt-4 text-3xl font-extrabold text-gray-900 md:text-5xl lg:text-6xl">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">MASTRSKY</span>
+          </h1>
         </div>
       </main>
     </>
   )
 }
 
-const getServerSideProps: GetServerSideProps<Props> = withPageAuthRequired<Props>({
+export const getServerSideProps: GetServerSideProps<Props> = withPageAuthRequired<Props>({
   returnTo: "/",
   async getServerSideProps(ctx) {
     const session = await getSession(ctx.req, ctx.res)
+    const services: string[] = []
+
+    if (process.env.TWITTER_API_KEY) {
+      services.push("Twitter")
+    }
+    if (process.env.MASTODON_URL) {
+      services.push("Mastodon")
+    }
+    if (process.env.NOSTR_PUB) {
+      services.push("Nostr")
+    }
+    if (process.env.BSKY_AUTHOR) {
+      services.push("Bluesky")
+    }
     return {
       props: {
         session: JSON.parse(JSON.stringify(session)),
+        services: services,
       },
     }
   },
