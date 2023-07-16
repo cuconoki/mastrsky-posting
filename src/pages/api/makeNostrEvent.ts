@@ -1,5 +1,5 @@
 
-import { signEvent, getEventHash, Event } from "nostr-tools"
+import {getEventHash, Event,getSignature } from "nostr-tools"
 import { withApiAuthRequired } from "@auth0/nextjs-auth0"
 
 export default withApiAuthRequired(async (req, res) => {
@@ -17,7 +17,7 @@ export default withApiAuthRequired(async (req, res) => {
     }
 
     const eventId = getEventHash(event)
-    const eventSig = signEvent(event, sk)
+    const eventSig = getSignature(event, sk)
 
     const signedEvent: Event = { ...event, id: eventId, sig: eventSig }
 

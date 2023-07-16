@@ -5,7 +5,7 @@ import type { NextPage } from "next"
 import { GetServerSideProps } from "next"
 import { getSession, withPageAuthRequired } from "@auth0/nextjs-auth0"
 import { useForm, SubmitHandler } from "react-hook-form"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Event } from "nostr-tools"
 import useNostrHook from "@/hooks/useNostrHook"
 
@@ -17,6 +17,7 @@ type Props = {
 type FormData = {
   comment: string
   service: (string | boolean | null)[]
+  file: FileList | null
 }
 
 type NostRes = {
@@ -29,52 +30,78 @@ const PostPage: NextPage<Props> = ({ services }) => {
 
   const isServices = services.length > 0 ? true : false
 
+  const fileInput = useRef<HTMLInputElement | null>(null)
+  const [fileName, setFileName] = useState("")
+  const [imageData, setImageData] = useState("")
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState,
     formState: { isSubmitSuccessful, errors },
-  } = useForm({ defaultValues: { comment: "", service: services } })
+  } = useForm({ defaultValues: { comment: "", service: services, file: null } })
 
-  useEffect(() => {
-    if (formState.isSubmitSuccessful) {
-      reset({ comment: "" })
+  const deployment = (files: FileList) => {
+    const file = files[0]
+    const fileReader = new FileReader()
+    setFileName(file.name)
+    fileReader.onload = () => {
+      setImageData(fileReader.result as string)
     }
-  }, [formState, reset])
+    fileReader.readAsDataURL(file)
+  }
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length <= 0) return
+    deployment(files) // ファイル名とプレビューの表示
+  }
+
+  const resetImage = () => {
+    setValue("file", null)
+    setFileName("")
+    setImageData("")
+  }
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     console.log(data)
     setIsPosting(true)
 
+    const file = data.file && data.file[0] ? data.file[0] : null
+    console.log(file)
+
+    // 送信データの準備
+    const formData = new FormData()
+    formData.append("comment", data.comment)
+    file && formData.append("image", file)
+
     if (data.service.includes("Twitter") === true) {
       const twitterRes = await fetch("/api/twitterPost", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ comment: data.comment }),
+        body: formData,
       })
       console.log("Twitter Postes")
     }
 
+    let mastImagePath: null | string = null
     if (data.service.includes("Mastodon") === true) {
       const mastodonRes = await fetch("/api/mastodonPost", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ comment: data.comment }),
+        body: formData,
       })
+      const response: { body?: string; image?: string; message?: string } = await mastodonRes.json()
+      mastImagePath = response.image ? response.image : null
       console.log("Mastodon Postes")
     }
     if (data.service.includes("Nostr") === true) {
+      const nostrComment = mastImagePath ? `${data.comment} ${mastImagePath}` : data.comment
+
       const nostrRes = await fetch("/api/makeNostrEvent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ comment: data.comment }),
+        body: JSON.stringify({ comment: nostrComment }),
       })
       const response: NostRes = await nostrRes.json()
       if (response.event) {
@@ -85,15 +112,24 @@ const PostPage: NextPage<Props> = ({ services }) => {
     if (data.service.includes("Bluesky") === true) {
       const bskyRes = await fetch("/api/bskyPost", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ comment: data.comment }),
+        body: formData,
       })
       console.log("Bluesky Postes")
     }
     setIsPosting(false)
   }
+
+  const { ref, ...rest } = register("file", {
+    onChange,
+  })
+
+  useEffect(() => {
+    if (formState.isSubmitSuccessful) {
+      reset({ comment: "", file: null })
+      setFileName("")
+      setImageData("")
+    }
+  }, [formState, reset])
 
   return (
     <>
@@ -126,6 +162,46 @@ const PostPage: NextPage<Props> = ({ services }) => {
                   className="w-full p-2 text-base text-gray-900 bg-white border-0 dark:bg-gray-800 focus:ring-0 dark:text-white dark:placeholder-gray-400"
                   placeholder="今何してる？"
                   {...register("comment", { required: true })}
+                />
+              </div>
+              <div className="border-t p-2">
+                <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" htmlFor="file">
+                  添付画像
+                </label>
+
+                {imageData && (
+                  <div className="w-16 aspect-square relative">
+                    <svg
+                      version="1.1"
+                      x="0px"
+                      y="0px"
+                      viewBox="0 0 512 512"
+                      xmlSpace="preserve"
+                      className="absolute -right-1 top-0 w-4"
+                    >
+                      <g>
+                        <path
+                          d="M256,0C114.618,0,0,114.618,0,256s114.618,256,256,256s256-114.618,256-256S397.382,0,256,0z M362.261,340.458
+		l-21.803,21.811L256,277.803l-84.458,84.466l-21.803-21.811L234.189,256l-84.45-84.458l21.803-21.803L256,234.197l84.458-84.458
+		l21.803,21.803L277.811,256L362.261,340.458z"
+                          style={{ fill: "rgb(0, 0, 0)" }}
+                        />
+                      </g>
+                    </svg>
+
+                    <img src={imageData} className="w-16 aspect-square" onClick={() => resetImage()} />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  id="file"
+                  accept="image/png, image/jpeg, image/gif"
+                  {...register("file")}
+                  className="block w-full border border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400
+            file:bg-transparent file:border-0
+            file:bg-gray-100 file:mr-4
+            file:py-2 file:px-3
+            dark:file:bg-gray-700 dark:file:text-gray-400"
                 />
               </div>
 

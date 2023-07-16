@@ -11,4 +11,5 @@
 }
 .postFiller--isPosting{
   display: block;
+  z-index: 10000;
 }
