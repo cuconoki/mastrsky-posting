@@ -1,8 +1,8 @@
-
-import {getEventHash, Event,getSignature } from "nostr-tools"
+import { getEventHash, Event, getSignature } from "nostr-tools"
 import { withApiAuthRequired } from "@auth0/nextjs-auth0"
 
-export default withApiAuthRequired(async (req, res) => {
+import type { NextApiRequest, NextApiResponse } from "next"
+export default withApiAuthRequired(async function api(req: NextApiRequest, res: NextApiResponse) {
   if (req.body.comment) {
     const comment = req.body.comment
     const sk = process.env.NOSTR_SECRET as string

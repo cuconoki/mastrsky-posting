@@ -105,7 +105,7 @@ const PostPage: NextPage<Props> = ({ services }) => {
       })
       const response: NostRes = await nostrRes.json()
       if (response.event) {
-        publishNostr(response.event)
+        await publishNostr(response.event)
         console.log("Nostr Postes")
       }
     }

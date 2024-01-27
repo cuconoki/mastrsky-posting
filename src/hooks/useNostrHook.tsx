@@ -3,14 +3,15 @@ export const useNostrHook = () => {
   const publishNostr = async (event: Event) => {
     const pool = new SimplePool()
     const relays = [
-      "wss://nostr.fediverse.jp",
+      "wss://relay.snort.social",
       "wss://relay.damus.io",
-      "wss://nostr.h3z.jp",
+      "wss://yabu.me",
       "wss://relay-jp.nostr.wirednet.jp",
       "wss://relay.nostr.wirednet.jp",
+      "wss://nostr-relay.nokotaro.com",
     ]
 
-    const pubs = pool.publish(relays, event)
+    const pubs = await pool.publish(relays, event)
     pubs.on("ok", () => {
       console.log(`has accepted our event`)
     })

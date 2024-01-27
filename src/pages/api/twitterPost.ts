@@ -2,6 +2,7 @@ import { withApiAuthRequired } from "@auth0/nextjs-auth0"
 import { TwitterApi } from "twitter-api-v2"
 import * as fs from "fs"
 import formidable from "formidable"
+import type { NextApiRequest, NextApiResponse } from "next"
 
 export const config = {
   api: {
@@ -16,7 +17,7 @@ const hasValueField = (error: any): error is { message: any } => {
     return false
   }
 }
-export default withApiAuthRequired(async (req, res) => {
+export default withApiAuthRequired(async function api(req: NextApiRequest, res: NextApiResponse) {
   try {
     // POST 以外ならエラー
     console.log(req.method)
@@ -40,7 +41,10 @@ export default withApiAuthRequired(async (req, res) => {
         })
       }
     )
-
+    if (!fields.comment) {
+      res.status(500).json({ message: "no fields" })
+      return
+    }
     const comment = fields.comment[0]
 
     const client = new TwitterApi({

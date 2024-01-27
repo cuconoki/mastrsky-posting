@@ -1,8 +1,9 @@
 import { withApiAuthRequired } from "@auth0/nextjs-auth0"
 import { NextRequest, NextResponse } from "next/server"
-import { login } from "masto"
+import { createRestAPIClient } from "masto"
 import * as fs from "fs"
 import formidable from "formidable"
+import type { NextApiRequest, NextApiResponse } from "next"
 
 export const config = {
   api: {
@@ -16,14 +17,14 @@ const hasValueField = (error: any): error is { message: any } => {
     return false
   }
 }
-export default withApiAuthRequired(async (req, res) => {
+export default withApiAuthRequired(async function api(req: NextApiRequest, res: NextApiResponse) {
   try {
     // POST 以外ならエラー
     if (req.method !== "POST") {
       throw new Error(`Invalid method [ ${req.method} ]`)
     }
 
-    const masto = await login({
+    const masto = await createRestAPIClient({
       url: process.env.MASTODON_URL as string,
       accessToken: process.env.MASTODON_TOKEN as string,
     })
@@ -56,11 +57,14 @@ export default withApiAuthRequired(async (req, res) => {
 
       const blob = new Blob([img_buffer], { type: mime })
 
-      const attachment = await masto.v2.mediaAttachments.create({
+      const attachment = await masto.v2.media.create({
         file: blob,
         description: "Some image",
       })
-
+      if (!fields.comment) {
+        res.status(500).json({ message: "no fields" })
+        return
+      }
       const status = await masto.v1.statuses.create({
         status: fields.comment[0],
         visibility: "public",
@@ -74,6 +78,10 @@ export default withApiAuthRequired(async (req, res) => {
       })
       res.status(200).json({ body: "OK", image: attachment.url })
     } else {
+      if (!fields.comment) {
+        res.status(500).json({ message: "no fields" })
+        return
+      }
       const status = await masto.v1.statuses.create({
         status: fields.comment[0],
         visibility: "public",

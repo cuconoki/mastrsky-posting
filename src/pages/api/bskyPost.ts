@@ -1,5 +1,5 @@
 import { withApiAuthRequired } from "@auth0/nextjs-auth0"
-
+import type { NextApiRequest, NextApiResponse } from "next"
 import { BskyAgent, RichText } from "@atproto/api"
 import * as fs from "fs"
 import formidable from "formidable"
@@ -30,7 +30,7 @@ const login = async () => {
   }
 }
 
-export default withApiAuthRequired(async (req, res) => {
+export default withApiAuthRequired(async function api(req: NextApiRequest, res: NextApiResponse) {
   try {
     // POST 以外ならエラー
     if (req.method !== "POST") {
@@ -53,6 +53,11 @@ export default withApiAuthRequired(async (req, res) => {
         })
       }
     )
+
+    if (!fields.comment) {
+      res.status(500).json({ message: "no fields" })
+      return
+    }
 
     const comment = fields.comment[0]
     const response = await login()
